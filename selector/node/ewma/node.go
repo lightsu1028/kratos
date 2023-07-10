@@ -74,12 +74,14 @@ func (n *Node) load() (load uint64) {
 	avgLag := atomic.LoadInt64(&n.lag)
 	lastPredictTs := atomic.LoadInt64(&n.predictTs)
 	predictInterval := avgLag / 5
+	// 5ms=<predictInterval<=200ms
 	if predictInterval < int64(time.Millisecond*5) {
 		predictInterval = int64(time.Millisecond * 5)
 	}
 	if predictInterval > int64(time.Millisecond*200) {
 		predictInterval = int64(time.Millisecond * 200)
 	}
+	// 距离上一次计算权重
 	if now-lastPredictTs > predictInterval && atomic.CompareAndSwapInt64(&n.predictTs, lastPredictTs, now) {
 		var (
 			total   int64
@@ -87,6 +89,7 @@ func (n *Node) load() (load uint64) {
 			predict int64
 		)
 		n.lk.RLock()
+		// 统计当前客户端发出去还未应答的请求延迟响应时间总数
 		first := n.inflights.Front()
 		for first != nil {
 			lag := now - first.Value.(int64)
@@ -96,6 +99,8 @@ func (n *Node) load() (load uint64) {
 			}
 			first = first.Next()
 		}
+		// 当前客户端发出的正在处理的请求个数超过半数的lantency大于历史平均lantency
+		// 计算这些高延时的请求平均lantency
 		if count > (n.inflights.Len()/2 + 1) {
 			predict = total / int64(count)
 		}
@@ -110,6 +115,7 @@ func (n *Node) load() (load uint64) {
 		return
 	}
 	predict := atomic.LoadInt64(&n.predict)
+	// 若半数以上正在处理的请求的平均lantency大于历史平均lantency，取这些半数处理中请求的平均lantency作为负载测算lantency
 	if predict > avgLag {
 		avgLag = predict
 	}
@@ -139,6 +145,8 @@ func (n *Node) Pick() selector.DoneFunc {
 		if td < 0 {
 			td = 0
 		}
+		// (e^(-td)-1)/tau
+		// 过去数据占比 td越大 w越小 采样时间越久 过去数据占比越小
 		w := math.Exp(float64(-td) / float64(tau))
 
 		start := e.Value.(int64)
