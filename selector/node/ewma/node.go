@@ -141,7 +141,7 @@ func (n *Node) Pick() selector.DoneFunc {
 		now := time.Now().UnixNano()
 		// get moving average ratio w
 		stamp := atomic.SwapInt64(&n.stamp, now)
-		// 请求距离上次的访问时间
+		// 请求距离上次的访问时间 td越小 访问频率越高 td越大 访问频率越低
 		// https://zhuanlan.zhihu.com/p/401118943
 		// https://exceting.github.io/2020/08/13/%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1-P2C%E7%AE%97%E6%B3%95/
 		// td越小 说明当前客户端访问服务越频繁，说明服务节点网络负载升高了, 我们想监测到此时节点处理请求的耗时(侧面反映了节点的负载情况), 我们就相应的调小β，β越小，EWMA值 就越接近本次耗时，进而迅速监测到网络毛刺;
