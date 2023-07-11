@@ -141,12 +141,18 @@ func (n *Node) Pick() selector.DoneFunc {
 		now := time.Now().UnixNano()
 		// get moving average ratio w
 		stamp := atomic.SwapInt64(&n.stamp, now)
+		// 请求距离上次的访问时间
+		// https://zhuanlan.zhihu.com/p/401118943
+		// https://exceting.github.io/2020/08/13/%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1-P2C%E7%AE%97%E6%B3%95/
+		// td越小 说明当前客户端访问服务越频繁，说明服务节点网络负载升高了, 我们想监测到此时节点处理请求的耗时(侧面反映了节点的负载情况), 我们就相应的调小β，β越小，EWMA值 就越接近本次耗时，进而迅速监测到网络毛刺;
+		// 当请求较为不频繁时, 我们就相对的调大β值。这样计算出来的 EWMA值 越接近平均值
 		td := now - stamp
 		if td < 0 {
 			td = 0
 		}
 		// (e^(-td)-1)/tau
-		// 过去数据占比 td越大 w越小 采样时间越久 过去数据占比越小
+		// 实际td越大 w越小
+		// 此处有点奇怪？ td越小 w反而越大 不符合ewma的β设定
 		w := math.Exp(float64(-td) / float64(tau))
 
 		start := e.Value.(int64)
