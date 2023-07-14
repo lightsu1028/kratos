@@ -7,7 +7,9 @@ import "sync"
 
 // Group is a lazy load container.
 type Group struct {
-	new  func() interface{}
+	// 工厂方法
+	new func() interface{}
+	// 缓存new工厂生产的对象
 	vals map[string]interface{}
 	sync.RWMutex
 }

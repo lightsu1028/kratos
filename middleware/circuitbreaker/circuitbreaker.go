@@ -53,6 +53,8 @@ func Client(opts ...Option) middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req interface{}) (interface{}, error) {
 			info, _ := transport.FromClientContext(ctx)
+			// info.Operation()为客户端调用封装的Transport信息 e.g /helloworld.Greeter/SayHello
+			// breaker的粒度为服务的operation(方法api)级别
 			breaker := opt.group.Get(info.Operation()).(circuitbreaker.CircuitBreaker)
 			if err := breaker.Allow(); err != nil {
 				// rejected
