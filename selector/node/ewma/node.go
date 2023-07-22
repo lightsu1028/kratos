@@ -153,6 +153,8 @@ func (n *Node) Pick() selector.DoneFunc {
 		// (e^(-td)-1)/tau
 		// 实际td越大 w越小
 		// 此处有点奇怪？ td越小 w反而越大 不符合ewma的β设定
+		// td越大 w越小
+		// 如果硬要使用下面这个衰减函数 那td应该表示为当次请求的lantency td越大 说明节点负载越高  w就越小越能监测毛刺;td越小 说明节点负载越小 w就越大越能平滑
 		w := math.Exp(float64(-td) / float64(tau))
 
 		start := e.Value.(int64)
